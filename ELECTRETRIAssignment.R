@@ -1,14 +1,14 @@
 ELECTRETRIAssignment <- function(performanceTable, 
-                                 indefferenceThresholdVector, preferenceThresholdVector, vetosThresholdVector=NULL,
-                                 credibilityThreshold, cutThreshold =NULL?
-                                   affectationMethod = NULL,
+                                 indefferenceThresholdVector, preferenceThresholdVector, vetoThresholdVector=NULL,
+                                 cutThreshold =NULL,
+                                 affectationMethod = NULL,
                                  categoriesLowerProfiles,  
                                  categoriesRanks, criteriaWeights, criteriaMinMax,
                                  alternativesIDs = NULL, criteriaIDs = NULL, categoriesIDs = NULL)
   
   
   
-  ## check the input data
+## check the input data
 {
   if (!((is.matrix(performanceTable) || (is.data.frame(performanceTable))))) 
     stop("wrong performanceTable, should be a matrix or a data frame")
@@ -20,8 +20,8 @@ ELECTRETRIAssignment <- function(performanceTable,
       if (!(is.vector(preferenceThresholdVector)))
           stop("preferenceThresholdVector should be a vector")
           
-          if (!((is.null(vetosThresholdVector) || (is.vector(vetosThresholdVector)))))
-            stop("vetosThresholdVector should be a vector")
+          if (!((is.null(vetoThresholdVector) || (is.vector(vetoThresholdVector)))))
+            stop("vetoThresholdVector should be a vector")
 
           if (!((is.matrix(categoriesLowerProfiles)||(is.data.frame(categoriesLowerProfiles)))))
             stop("categoriesLowerProfiles should be a matrix or a data frame")
@@ -66,32 +66,46 @@ ELECTRETRIAssignment <- function(performanceTable,
   Crt <- criteriaIDs 
   F <- 1:length(Crt)                # criteria indices  
   
-  q=indefferenceThresholdVector
-  p=preferenceThresholdVector
-  v=vetosThresholdVector
-  if (is.null(v)){              # Creation of the null vector for to avoid calculation problem
-    v <-  rep(0, ncol(B))
-  }
+  # Declare the number of criteria, the number of alternatives and number of categories
+    # -------------------------------------------------------
+    
+    numCrit <- dim(performanceTable)[2]
+    
+    numAlt <- dim(performanceTable)[1]
+    
+    numCat <- length(categoriesRanks)
+    
+    # -------------------------------------------------------
+   crtmm <- criteriaMinMax
   
-  sigma=credibilityThreshold
-  lambda <- cutThreshold
-  if (is.null(lambda)){
-    lambda <-0.7
-  }
-  
-  
-  
-  
-  crtmm <- criteriaMinMax
-  
-  A <- alternativesIDs 
+  A <- alternativesIDs        # Alternatives
   
   
   catIDs <- categoriesIDs
   
   n <- length(F)    # number of criteria 
   m <- length(A)    # number of alternatives  
-  h <- nrow(B)      # number of categories 
+  h <- nrow(B)      # number of categori lower profil
+  numCat <- length(categoriesRanks)
+  
+  q=indefferenceThresholdVector
+  p=preferenceThresholdVector
+  v=vetoThresholdVector
+  if (is.null(v)){              # Creation of the null vector for to avoid calculation problem
+    v <-  matrix(0, h, n)
+  }
+  
+  lambda <- cutThreshold
+  if (is.null(lambda)){
+    lambda <-0.76
+  }
+  
+  if (is.null(affectationMethod)){
+    affectationMethod <- "pess"  # The default method will be the pessimistic one           
+  }
+  
+ Affect <- NULL                 # This for the final affectation table
+  
 }
 
 # Construction of concordance index table.
@@ -138,7 +152,7 @@ ELECTRETRIAssignment <- function(performanceTable,
 
 # Construction of discordance index table.
 {
-  v_j <- B-row(G)
+  # v_j <- B-row(G)
   d_j <- matrix(0, nrow = h*2, ncol = n)          # Matrix of the partial discordance indices 
   dj <- NULL                                      # Table of partial discordance indices 
   
@@ -189,7 +203,11 @@ ELECTRETRIAssignment <- function(performanceTable,
                     Cglob[1]*prod((1-dj[i,])/(1-Cglob[i])))
     }
   }
+  dj_ordered <- rbind(dj[seq(1,nrow(dj), 2),],dj[seq(2,nrow(dj), 2),])
+  sgma_ordred <- t(t(c(sgma[seq(1,nrow(sgma), 2)], sgma[seq(2,nrow(sgma), 2)])))
+  Cglob_ordered <- t(t(c(Cglob[seq(1,nrow(Cglob), 2)],Cglob[seq(2,nrow(Cglob), 2)])))
   Tglob <- cbind(dj, Cglob, sgma)
+  Tglob_ordered <- cbind(dj_ordered, Cglob_ordered, sgma_ordred)
 }
 
 ## filter the data according to the given alternatives and criteria
@@ -205,19 +223,15 @@ ELECTRETRIAssignment <- function(performanceTable,
     performanceTable <- performanceTable[,criteriaIDs,drop=FALSE]
     criteriaWeights <- criteriaWeights[criteriaIDs,drop=FALSE]
     criteriaMinMax <- criteriaMinMax[criteriaIDs,drop=FALSE]
-    categoriesLowerProfiles <- categoriesLowerProfiles[,criteriaIDs,drop=FALSE]
+    categoriesLowerProfiles <- categoriesLowerProfiles[,criteriaIDs, drop=FALSE]
   }
   
-  if ((!is.null(criteriaIDs)) && (!is.null(vetosThresholdVector))){
-    vetosThresholdVector <- vetosThresholdVector[,criteriaIDs,drop=FALSE]  
+  if ((!is.null(criteriaIDs)) && (!is.null(vetoThresholdVector))){
+    vetoThresholdVector <- vetoThresholdVector[,criteriaIDs,drop=FALSE]  
   }
   
-  if ((!is.null(categoriesIDs)) && (!is.null(vetosThresholdVector))){
-    vetosThresholdVector <- vetosThresholdVector[categoriesIDs,,drop=FALSE]
-  }
-  
-  if (!is.null(categoriesIDs)){
-    categoriesLowerProfiles <- categoriesLowerProfiles[categoriesIDs,,drop=FALSE]
+  if ((!is.null(categoriesIDs)) && (!is.null(vetoThresholdVector))){
+    vetoThresholdVector <- vetoThresholdVector[categoriesIDs,,drop=FALSE]
   }
   
   if (!is.null(categoriesIDs)){
@@ -238,93 +252,40 @@ ELECTRETRIAssignment <- function(performanceTable,
   
 }
 
-# Declare the number of criteria, the number of alternatives and number of categories
+# derternation of the preference relation between a_i and b_h
 {
-  # -------------------------------------------------------
-  
-  numCrit <- dim(performanceTable)[2]
-  
-  numAlt <- dim(performanceTable)[1]
-  
-  numCat <- length(categoriesRanks)
-  
-  # -------------------------------------------------------
-  
-}
+
+  Surclass <- NULL
+  for (i in seq(1,nrow(Cglob_ordered ), 2)) {
+    if (Cglob_ordered[i] >= lambda & Cglob_ordered[i+1] >= lambda) {            # If sigma(a, b_h) < lambda => 0 means aSb_h
+      Surclass<-rbind(0, Surclass)
+    } else if (Cglob_ordered[i] >= lambda & Cglob_ordered[i+1] < lambda) {
+      Surclass<-rbind(1, Surclass)                # else sigma(a, b_h) b_hSa
+    } else if (Cglob_ordered[i] < lambda & Cglob_ordered[i+1] >= lambda) {
+      Surclass<-rbind(-1, Surclass)                # else sigma(a, b_h) b_hSa
+    }else if (Cglob_ordered[i] < lambda & Cglob_ordered[i+1] < lambda) {
+      Surclass<-rbind("R", Surclass)                # else sigma(a, b_h) b_hSa
+    }
+  }
+} 
 
 # fuctions 
-{
-  getCategory <- function(i)
-  {
-    for (k in (numCat-1):1)
-    {
-      cat <- names(categoriesRanks)[categoriesRanks == k]
-      
-      weightedSum <- 0
-      
-      for (crit in names(criteriaMinMax))
-      {
-        if (criteriaMinMax[crit] == "min")
-        {
-          if (performanceTable[i,crit] %<=% categoriesLowerProfiles[cat,crit])
-            weightedSum <- weightedSum + criteriaWeights[crit]
-        }
-        else
-        {
-          if (performanceTable[i,crit] %>=% categoriesLowerProfiles[cat,crit])
-            weightedSum <- weightedSum + criteriaWeights[crit]
-        }
-      }
-      
-      vetoActive <- FALSE
-      
-      if(!is.null(vetosThresholdVector))
-      {
-        for (crit in names(criteriaMinMax))
-        {
-          if(!is.na(vetosThresholdVector[cat,crit]) & !is.null(vetosThresholdVector[cat,crit]))
-          {
-            if (criteriaMinMax[crit] == "min")
-            {
-              if (performanceTable[i,crit] %>=% vetosThresholdVector[cat,crit])
-              {
-                vetoActive <- TRUE
-                break
-              }
-            }
-            else
-            {
-              if (performanceTable[i,crit] %<=% vetosThresholdVector[cat,crit])
-              {
-                vetoActive <- TRUE
-                break
-              }
-            }
-          }
-        }
-      }
-      
-      # stopping condition
-      if(weightedSum < credibilityThreshold || vetoActive)
-        return(names(categoriesRanks)[categoriesRanks == (k + 1)])
-    }
-    # better than all profiles -> top categ
-    return(names(categoriesRanks)[categoriesRanks == 1])
-  }
-}
 
-# Result
+getCategory <- function(i)
 {
-  assignments <- sapply(1:numAlt, getCategory)
-  
-  names(assignments) <- rownames(performanceTable)
-  
-  return(assignments)
+  if (affectationMethod == "opt") {
+    for (i in seq(1,nrow(Surclass)/2,2)) {
+      if(Surclass[i+1]==-1){
+        Affect <- rbind(Affect, cbind(alternativesIDs[i], categoriesIDs[numCat]))
+        }
+      }
+    }
 }
 
 # Example
 {
   # the performance table
+  
   
   performanceTable <- rbind(
     c(2.63, 5.26, 52.63, 84.21, 26.32),
@@ -347,7 +308,7 @@ ELECTRETRIAssignment <- function(performanceTable,
   preferenceThresholdVector <- c(1, 1, 1, 1, 1)
   
   # vetos
-  # vetosThresholdVector <- rbind(c(NA, NA, NA, NA, NA),c(NA, NA, NA, NA, NA),c(NA,NA,NA, NA, NA))
+  # vetoThresholdVector <- rbind(c(NA, NA, NA, NA, NA),c(NA, NA, NA, NA, NA),c(NA,NA,NA, NA, NA))
   
   colnames(vetoThresholdVector) <- colnames(performanceTable)
   rownames(vetoThresholdVector) <- c("Good","Medium","Bad")
