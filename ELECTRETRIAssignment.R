@@ -65,7 +65,7 @@ ELECTRETRIAssignment <- function(performanceTable,
     
     K <- criteriaWeights
     Crt <- criteriaIDs 
-    F <- 1:length(Crt)                # criteria indices  
+    F <- 1:ncol(G)                # criteria indices  
     
     # Declare the number of criteria, the number of alternatives and number of categories
     numCrit <- dim(performanceTable)[2]
@@ -99,43 +99,131 @@ ELECTRETRIAssignment <- function(performanceTable,
       affectationMethod <- "pess"  # The default method will be the pessimistic one           
     }
     
-   finalAffectation <- NULL                 # This for the final affectation table
+    finalAffectation <- NULL                 # This for the final affectation table
     
   }
   
+  # check if we have a lower profile for the worst category
+  { 
+    worstCat <- names(categoriesRanks)[categoriesRanks == length(categoriesRanks)]
+    
+    if(!(worstCat %in% rownames(categoriesLowerProfiles)))
+    {
+      categoriesLowerProfiles <- rbind(categoriesLowerProfiles, rep(NA,length(criteriaMinMax)))
+      
+      rownames(categoriesLowerProfiles)[length(categoriesRanks)] <- worstCat
+    }
+    
+    if (!is.null(criteriaVetos))
+    {
+      if(!(worstCat %in% rownames(criteriaVetos)))
+      {
+        criteriaVetos <- rbind(criteriaVetos, rep(NA,length(criteriaMinMax)))
+        
+        rownames(criteriaVetos)[length(categoriesRanks)] <- worstCat
+      }
+    }
+  }
+  
+  ## filter the data according to the given alternatives and criteria
+  {
+    if (!is.null(alternativesIDs)){
+      performanceTable <- performanceTable[alternativesIDs,,drop=FALSE]
+    } 
+    
+    if (!is.null(criteriaIDs)){
+      performanceTable <- performanceTable[,criteriaIDs,drop=FALSE]
+      criteriaWeights <- criteriaWeights[criteriaIDs,drop=FALSE]
+      criteriaMinMax <- criteriaMinMax[criteriaIDs,drop=FALSE]
+      categoriesLowerProfiles <- categoriesLowerProfiles[,criteriaIDs,drop=FALSE]
+    }
+    
+    if ((!is.null(criteriaIDs)) && (!is.null(criteriaVetos))){
+      criteriaVetos <- criteriaVetos[,criteriaIDs,drop=FALSE]  
+    }
+    
+    if ((!is.null(categoriesIDs)) && (!is.null(criteriaVetos))){
+      criteriaVetos <- criteriaVetos[categoriesIDs,,drop=FALSE]
+    }
+    
+    if (!is.null(categoriesIDs)){
+      categoriesLowerProfiles <- categoriesLowerProfiles[categoriesIDs,,drop=FALSE]
+    }
+    
+    if (!is.null(categoriesIDs)){
+      # filter out categories
+      categoriesRanks <- categoriesRanks[names(categoriesRanks) %in% categoriesIDs]
+      # check if we took out all categories
+      if(length(categoriesRanks) == 0)
+        stop('categoriesIDs have filtered out all categories')
+      # order the remaining ones
+      categoriesRanks <- sort(categoriesRanks)
+      # store their order
+      catOrder <- names(categoriesRanks)
+      # adjust their indices to a range from 1 to the number of remaining categories
+      categoriesRanks <- 1:length(categoriesRanks)
+      # rename them
+      names(categoriesRanks) <- catOrder
+    }
+  }
 
-  # Construction of concordance index table.
+    # Construction of concordance index table.
   {
     c_j <- matrix(0, nrow = h*2, ncol = n)          # Matrix of the partial concordance indices 
     cj <- NULL
     concornames <- NULL                             # For  partial Concordance names
     
     # Table of partial concordance indices 
-    
     for (i in 1:m) {      # Loop for each alternative
       for (j in F) {    # Loop for each criteria
+        if (criteriaMinMax[j]=="max"){
+          # For  maximisation
         for (l in 1:h) {  # Loop for each category profile
           
           # Calculation of the c_j(a_i,b_h)  
-          if (B[l,j]-G[i,j]>=p[j]){
+          if (G[i,j] <= (B[l,j]-p[j])){
             c_j[l,j] <- 0
-          }else if(B[l,j]-G[i,j]<=q[j]){
+          }else if((B[l,j]-q[j]) < G[i,j]){
             c_j[l,j] <- 1
           }else {
-            c_j[l,j] <- (p[j]+G[i,j]-B[h,j])/(p[j]-q[j])
+            c_j[l,j] <- (p[j]+G[i,j]-B[l,j])/(p[j]-q[j])
           }
           
           # Calculation of the c_j(b_h, a_i) 
-          if (G[i,j]-B[l,j]>=p[j]){
+          if (G[i,j] >= (p[j]+B[l,j])){
             c_j[l+2,j] <- 0
-          }else if(G[i,j]-B[l,j]<=q[j]){
+          }else if(G[i,j] < (q[j]+B[l,j])){
             c_j[l+2,j] <- 1
           }else {
-            c_j[l+2,j] <- (p[j]-G[i,j]+B[h,j])/(p[j]-q[j])
+            c_j[l+2,j] <- (p[j]-G[i,j]+B[l,j])/(p[j]-q[j])
           }
         } 
       }
-      
+      else if (criteriaMinMax[j]=="min"){
+      # For minimisation
+        for (l in 1:h) {  # Loop for each category profile
+            
+            # Calculation of the c_j(a_i,b_h)  
+            if (G[i,j] >= (B[l,j]+p[j])){
+              c_j[l,j] <- 0
+            }else if((B[l,j]+q[j]) > G[i,j]){
+              c_j[l,j] <- 1
+            }else {
+              c_j[l,j] <- (p[j]+B[l,j]-G[i,j])/(p[j]-q[j])
+            }
+            
+            # Calculation of the c_j(b_h, a_i) 
+            if (G[i,j] <= (B[l,j]-p[j])){
+              c_j[l+2,j] <- 0
+            }else if(G[i,j] > (B[l,j]-q[j])){
+              c_j[l+2,j] <- 1
+            }else {
+              c_j[l+2,j] <- (p[j]+G[i,j]-B[l,j])/(p[j]-q[j])
+            }
+          } 
+      }
+        
+      }
       # Track of the partial concordance indices c_j(a,b_h) and c_j(b_h, a)
       cj<- rbind(cj,c_j)        
       colnames(cj) <- colnames(G)
@@ -144,7 +232,7 @@ ELECTRETRIAssignment <- function(performanceTable,
       # partial Concordance names
       for (z in 2:numCat-1) {
         for (i in 1:m) {
-        concornames <- cbind(concornames,paste("cj(a",i,",","b",z,")", sep=""), paste("cj(b",z,",","a",i,")", sep=""))
+          concornames <- cbind(concornames,paste("cj(a",i,",","b",z,")", sep=""), paste("cj(b",z,",","a",i,")", sep=""))
         } 
       }
       cj_ordered <- rbind(cj[seq(1,nrow(cj), 2),],cj[seq(2,nrow(cj), 2),]) #cj(a,b) ordered
@@ -155,188 +243,215 @@ ELECTRETRIAssignment <- function(performanceTable,
 
   # Calculation of the global concordance indices C(a,b_h) et C(b_h, a)
   {
-    
-    Cglob <- t((K%*%t(cj))/sum(K))       # Matrix of the global concordance indices
-    Cglob_ordered <- t(t(c(Cglob[seq(1,nrow(Cglob), 2)],Cglob[seq(2,nrow(Cglob), 2)])))
-    colnames(Cglob_ordered) <- "GlobalConcordance"
-    rownames(Cglob_ordered) <-(t(concornames))
-    
-    # Creation of the global concordance table
-    Cglob1 <- NULL
-    Cglob2 <- NULL
-    CabNames <- NULL
-    
-    for (i in seq(1,nrow(Cglob), nrow(Cglob_ordered)/length(A)/2)) {
-      Cglob1 <- rbind(Cglob1,c(Cglob_ordered[i], Cglob_ordered[i+1]))
-    }
-    for (i in 1:length(A)) {
-      Cglob2 <- rbind(Cglob2,c(Cglob1[i,], Cglob1[i+length(A),]))
-    }
-   
-    for (i in 1:h) {
-      CabNames <- cbind(CabNames,paste("cj(ai",",","b",i,")", sep=""), paste("cj(b",i,",","ai",")", sep=""))
-    }  
-    rownames(Cglob2) <- A
-    colnames(Cglob2) <- CabNames
+  cj_ordered<- data.frame(cj_ordered)
+  cj_ordered$Cglob <- t((K%*%t(cj_ordered))/sum(K))       # Matrix of the global concordance indices
+  cj_ordered
   }
   
 
   # Construction of discordance index table.
   {
-    # v_j <- B-row(G)
-    d_j <- matrix(0, nrow = h*2, ncol = n)          # Matrix of the partial discordance indices 
-    dj <- NULL                                      # Table of partial discordance indices 
-    
-    for (i in 1:m) {      # Loop for each alternative
-      for (j in F) {    # Loop for each criteria
+  
+  d_j <- matrix(0, nrow = h*2, ncol = n)          # Matrix of the partial discordance indices 
+  dj <- NULL
+  discornames <- NULL                             # For  partial discordance names
+  
+  # Table of partial discordance indices 
+  for (i in 1:m) {      # Loop for each alternative
+    for (j in F) {    # Loop for each criteria
+      if (criteriaMinMax[j]=="max"){
+        # For  maximisation
         for (l in 1:h) {  # Loop for each category profile
           
           # Calculation of the d_j(a_i,b_h)  
-          if (G[i,j] <= (B[l,j] + p[j])){
+          if (G[i,j] > (B[l,j]-p[j])){
             d_j[l,j] <- 0
-          }else if(G[i,j] > B[l,j] + v[j]){
+          }else if((B[l,j]-v[j]) >= G[i,j]){
             d_j[l,j] <- 1
           }else {
-            d_j[l,j] <- (B[h,j]-G[i,j]-p[j])/(v[j]-p[j])
+            d_j[l,j] <- (G[i,j]-B[l,j]-p[j])/(v[j]-p[j])
           }
           
           # Calculation of the d_j(b_h, a_i) 
-          if (B[l,j] <= G[i,j] +p[j]){
+          if (G[i,j] <= (p[j]+B[l,j])){
             d_j[l+2,j] <- 0
-          }else if( B[l,j] > G[i,j]+v[j]){
+          }else if(G[i,j] > (v[j]+B[l,j])){
             d_j[l+2,j] <- 1
           }else {
-            d_j[l+2,j] <- (G[i,j]-B[h,j]-p[j])/(v[j]-p[j])
+            d_j[l+2,j] <- (G[i,j]-B[l,j]-p[j])/(v[j]-p[j])
           }
         } 
       }
-      dj<- rbind(dj,d_j)                      # Track of the partial concordance indices d_j(a,b_h) and d_j(b_h, a)
+      else if (criteriaMinMax[j]=="min"){
+        # For minimisation
+        for (l in 1:h) {  # Loop for each category profile
+          
+          # Calculation of the d_j(a_i,b_h)  
+          if (G[i,j] <= (B[l,j]+p[j])){
+            d_j[l,j] <- 0
+          }else if((B[l,j]+v[j]) < G[i,j]){
+            d_j[l,j] <- 1
+          }else {
+            d_j[l,j] <- (G[i,j]-B[l,j]-p[j])/(v[j]-p[j])
+          }
+          
+          # Calculation of the d_j(b_h, a_i) 
+          if (G[i,j] > (B[l,j]-p[j])){
+            d_j[l+2,j] <- 0
+          }else if(G[i,j] <= (B[l,j]-v[j])){
+            d_j[l+2,j] <- 1
+          }else {
+            d_j[l+2,j] <- (B[l,j]-G[i,j]-p[j])/(v[j]-p[j])
+          }
+        } 
+      }
+      
     }
-    dj_ordered <- rbind(dj[seq(1,nrow(dj), 2),],dj[seq(2,nrow(dj), 2),])
-    
-    
+    # Track of the partial discordance indices d_j(a,b_h) and d_j(b_h, a)
+    dj<- rbind(dj,d_j)                         
+    colnames(dj) <- colnames(G)
   }
   
+  # partial discordance names
+  for (z in 2:numCat-1) {
+    for (i in 1:m) {
+      discornames <- cbind(discornames,paste("dj(a",i,",","b",z,")", sep=""), paste("dj(b",z,",","a",i,")", sep=""))
+    } 
+  }
+  dj_ordered <- rbind(dj[seq(1,nrow(dj), 2),],dj[seq(2,nrow(dj), 2),]) #dj(a,b) ordered
+  rownames(dj_ordered) <- t(discornames)
+}
+
+
   # Calculation of the degree of credibility
   {
-    sgma <- NULL                                         # Declaration of the credibility index vector           
-    for (i in 1:nrow(dj)) {
-      tstVect <- (dj[i,] > Cglob[i] & dj[i,]==1)         # Booleen vector for testing if the particular cases of sigma
-      if (TRUE %in% tstVect){                            # We test if the tstVect vector contain a TRUE value which means    
-        sgma <- rbind(sgma, 0)                           # there is j such that dj(a, b) > C(a, b) and dj(a, b)=1 <=> sigma(a,b)=0
-      }else if (Cglob[i]==1){                            # If C(a,b)=1 <=> sigma(a,b)=1 and dj(a,b)=0 for all j such that 
-        sgma <- rbind(sgma, 1)                           # dj(a,b) > C(a,b)
-      }else if (!(FALSE %in% (dj[i,] < Cglob[i]))){      # If for all j, dj(a, b) < C(a,b) then sigma(a,b) = C(a,b)
-        sgma <- rbind(sgma, Cglob[i])
-      }else{
-        sgma <- rbind(sgma,Cglob[1]*prod((1-dj[i,])/(1-Cglob[i])))
-      }
+  sgma <- NULL                                         # Declaration of the credibility index vector           
+  credibnames <- NULL                                  # Declaration of the credibility indices name           
+  for (i in 1:nrow(dj_ordered)) {
+  if (max(dj_ordered[i,])==0) {
+    sgma <- rbind(sgma,  cj_ordered$Cglob[i])
+  }else if (max(dj_ordered[i,])==1) {
+    sgma <- rbind(sgma, 0)
+  }else if (max(dj_ordered) < 1) {
+    for (j in 1:ncol(dj_ordered)) {
+      if(cj_ordered$Cglob[i] < dj_ordered[i,j]){
+        sgma <- rbind(sgma,cj_ordered$Cglob[i]*prod((1-dj_ordered[i,j])/(1-cj_ordered$Cglob[i])))
+    } 
     }
-    sgma_ordred <- t(t(c(sgma[seq(1,nrow(sgma), 2)], sgma[seq(2,nrow(sgma), 2)])))
-    Tglob <- cbind(dj, Cglob, sgma)
-    Tglob_ordered <- cbind(dj_ordered, Cglob_ordered, sgma_ordred)
   }
+  }
+  # Credibility row names
+  for (z in 2:numCat-1) {
+    for (i in 1:m) {
+      credibnames <- cbind(credibnames,paste("sgma(a",i,",","b",z,")", sep=""), paste("sgma(b",z,",","a",i,")", sep=""))
+    } 
+  }
+  rownames(sgma) <- t(credibnames)
+  colnames(sgma) <- "credibility index"
+}
+
   
   # derternation of the preference relation between a_i and b_h
   {
   
-    Surclass <- NULL
-    for (i in seq(1,nrow(sgma_ordred), 2)) {
-      if (sgma_ordred[i] >= lambda & sgma_ordred[i+1] >= lambda) {            # If sigma(a, b_h) < lambda => 0 means aSb_h
-        Surclass<-rbind(0, Surclass)
-      } else if (sgma_ordred[i] >= lambda & sgma_ordred[i+1] < lambda) {
-        Surclass<-rbind(1, Surclass)                # else sigma(a, b_h) b_hSa
-      } else if (sgma_ordred[i] < lambda & sgma_ordred[i+1] >= lambda) {
-        Surclass<-rbind(-1, Surclass)                # else sigma(a, b_h) b_hSa
-      }else if (sgma_ordred[i] < lambda & sgma_ordred[i+1] < lambda) {
-        Surclass<-rbind("R", Surclass)                # else sigma(a, b_h) b_hSa
+    Outranks <- NULL
+    # I     : Indefference (aSb_h and b_hSa ???aIb_h)
+    # > (<) : Preference (a>b => aSb_h ; a<b => b_hSa)
+    # R     : incomparable (not aSb_h and not b_hSa)
+    for (i in seq(1,nrow(sgma), 2)) {
+      if (sgma[i] >= lambda & sgma[i+1] >= lambda) {            # If sigma(a, b_h) < lambda => 0 means aSb_h
+        Outranks<-rbind("I", Outranks)
+      } else if (sgma[i] >= lambda & sgma[i+1] < lambda) {
+        Outranks<-rbind("<", Outranks)                # else sigma(a, b_h) b_hSa
+      } else if (sgma[i] < lambda & sgma[i+1] >= lambda) {
+        Outranks<-rbind(">", Outranks)                # else sigma(a, b_h) b_hSa
+      }else if (sgma[i] < lambda & sgma[i+1] < lambda) {
+        Outranks<-rbind("R", Outranks)                # else sigma(a, b_h) b_hSa
       }
     } 
-  }    
+    outrankTable <- NULL
+    Outranks <- data.frame(Outranks)
+    for (i in seq(1, nrow(Outranks), ncol(B))) {
+      outrankTable <- rbind(outrankTable, t(Outranks$Outranks[i:(i+ncol(B)-1)]))
+    }
+    colnames(outrankTable) <- rownames(G)
+    rownames(outrankTable) <- rownames(B)
+    outrankTable
+   }    
     #################################### Le tableau des sigma à corriger###########################
     ###############################################################################################
     
     
   
   # fuctions 
+{
+  # pessimistic assignment
+  # a) compare alternatives ("a") successively to "b(i)" , for i=p,p-1, ..., 0,
+  # b) let "b(h)" = the first profile such that "a" outranks "b(h).",
+  # affect "a" to the category C(h+1).
   
-  getCategory <- function(i)
-    {
-      if (affectationMethod == "pess") {
-        
-        for (k in (numCat-1):1)
-        {
-          cat <- names(categoriesRanks)[categoriesRanks == k]
-          
-          weightedSum <- 0
-          
-          for (crit in names(criteriaMinMax))
-          {
-            if (criteriaMinMax[crit] == "min")
-            {
-              if (performanceTable[i,crit] %<=% categoriesLowerProfiles[cat,crit])
-                weightedSum <- weightedSum + criteriaWeights[crit]
-            }
-            else
-            {
-              if (performanceTable[i,crit] %>=% categoriesLowerProfiles[cat,crit])
-                weightedSum <- weightedSum + criteriaWeights[crit]
+  
+  if (!(affectationMethod=="opt")) {
+    Pessimistic <-  matrix (0,nrow(B)+1 ,nrow(G) )
+    rownames(Pessimistic) <- names(categoriesRanks)
+    colnames(Pessimistic) <- rownames(G)
+  
+    # Pessimistic assignment procedure:
+    for (i in 1:nrow(G)){
+      for (j in 1:nrow(B)){
+        if (outrankTable[j,i]=="<" && j==1 && !(max(Pessimistic[1:nrow(B)+1,i])==1)) {
+          Pessimistic[j,i]=1
+        }else{
+          for (j in 1:nrow(B)) {
+            if (!(outrankTable[j,i]=="<") && !(j==1) && !(max(Pessimistic[1:nrow(B)+1,i])==1)){
+              Pessimistic[j,i]=1
+            }else if ((outrankTable[j,i]==">" || outrankTable[j,i]=="R" || outrankTable[j,i]=="I") && j==nrow(B) && !(max(Pessimistic[1:nrow(B)+1,i])==1)) {
+              Pessimistic[j+1,i]=1
+            }else{
+              Pessimistic[j+1,i]=0
             }
           }
-          
-          vetoActive <- FALSE
-          
-          if(!is.null(criteriaVetos))
-          {
-            for (crit in names(criteriaMinMax))
-            {
-              if(!is.na(criteriaVetos[cat,crit]) & !is.null(criteriaVetos[cat,crit]))
-              {
-                if (criteriaMinMax[crit] == "min")
-                {
-                  if (performanceTable[i,crit] %>=% criteriaVetos[cat,crit])
-                  {
-                    vetoActive <- TRUE
-                    break
-                  }
-                }
-                else
-                {
-                  if (performanceTable[i,crit] %<=% criteriaVetos[cat,crit])
-                  {
-                    vetoActive <- TRUE
-                    break
-                  }
-                }
-              }
-            }
-          }
-          
-          # stopping condition
-          if(weightedSum < majorityThreshold || vetoActive)
-            return(names(categoriesRanks)[categoriesRanks == (k + 1)])
         }
-        # better than all profiles -> top categ
-        return(names(categoriesRanks)[categoriesRanks == 1])
       }
     }
+  
+  View(Pessimistic)
+  
+  }else if(affectationMethod=="opt"){
+    Optimistic <-  matrix (0,nrow(B)+1 ,nrow(G) )
+    rownames(Optimistic) <- names(categoriesRanks)
+    colnames(Optimistic) <- rownames(G)
     
+    # optimistic assignment,
+    # a) compare alternatives ("a") successively to "b(i)" ,for  i=1, 2, ..., p+1,
+    # b) let "b(h)" = the first profile such that "b(h)" outranks ("a"),
+    # affect "a" to the category C(h).
     
-    
-    
-    
-    
-    
-    if (affectationMethod == "opt") {
-      for (i in seq(1,nrow(Surclass)/2,2)) {
-        if(Surclass[i+1]=="-1"){
-          finalAffectation <- rbind(Affect, cbind(alternativesIDs[i], categoriesIDs[numCat]))
-          }else if (Surclass[i+1]=="0" & Surclass[i]=="-1") {
-              finalAffectation <- rbind(Affect, cbind(alternativesIDs[i], categoriesIDs[numCat]))
+    # Optimistic assignment procedure: 
+    for (i in 1:nrow(G)){
+      for (j in nrow(B):1){
+        if (outrankTable[j,i]==">" & j==nrow(B)) {
+          Optimistic[j+1,i]=1
+        }else{
+          for (j in nrow(B):1) {
+            if (!(outrankTable[j,i]==">") & !(j==1)){
+              next
+            }else if ((outrankTable[j,i]=="<" | outrankTable[j,i]=="R" | outrankTable[j,i]=="I") & j==1 & !(max(Optimistic[1:nrow(B)+1,i])==1)) {
+              Optimistic[j,i]=1
+            }else{
+              Optimistic[j,i]=0
+            }
           }
         }
       }
+    }
+    View(Optimistic)
+}      
+    
   
+  
+  }
+
   
   # Example
   {
