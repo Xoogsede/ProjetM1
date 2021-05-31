@@ -71,10 +71,6 @@ ELECTRETRIAssignment <- function(performanceTable,
       Crt <- criteriaIDs 
       F <- 1:ncol(G)                # criteria indices  
       
-      # Declare the number of criteria, the number of alternatives and number of categories
-      numCrit <- dim(performanceTable)[2]
-      numAlt <- dim(performanceTable)[1]
-      numCat <- length(categoriesRanks)
       
       crtmm <- criteriaMinMax
       A <- alternativesIDs        # Alternatives
@@ -102,12 +98,11 @@ ELECTRETRIAssignment <- function(performanceTable,
       if (is.null(affectationMethod)){
         affectationMethod <- "pess"  # The default method will be the pessimistic one           
       }
-      
-      finalAffectation <- NULL                 # This for the final affectation table
+     
     }
-  
-  
- 
+    
+    
+    
     # Construction of concordance index table.
     {
       c_j <- matrix(0, nrow = h*2, ncol = n)          # Matrix of the partial concordance indices 
@@ -181,8 +176,8 @@ ELECTRETRIAssignment <- function(performanceTable,
     
     }
     
-  
-  
+    
+    
     # Calculation of the global concordance indices C(a,b_h) et C(b_h, a)
     {
       cj_ordered<- data.frame(cj_ordered)
@@ -192,8 +187,8 @@ ELECTRETRIAssignment <- function(performanceTable,
       
     
     
-      # Construction of discordance index table.
-      {
+    # Construction of discordance index table.
+    {
       
       d_j <- matrix(0, nrow = h*2, ncol = n)          # Matrix of the partial discordance indices 
       dj <- NULL
@@ -264,9 +259,9 @@ ELECTRETRIAssignment <- function(performanceTable,
       dj_ordered <- rbind(dj[seq(1,nrow(dj), 2),],dj[seq(2,nrow(dj), 2),]) #dj(a,b) ordered
       rownames(dj_ordered) <- t(discornames)
     }
-  
-  
-  
+    
+    
+    
     # Calculation of the degree of credibility
     {
       sgma <- NULL                                         # Declaration of the credibility index vector           
@@ -293,8 +288,8 @@ ELECTRETRIAssignment <- function(performanceTable,
       rownames(sgma) <- t(credibnames)
       colnames(sgma) <- "credibility index"
     }
-  
-  
+    
+    
     
     # derternation of the preference relation between a_i and b_h
     {
@@ -323,7 +318,7 @@ ELECTRETRIAssignment <- function(performanceTable,
       outrankTable
       }  
      
-   
+    
     
     # Assignment  
     {
@@ -457,7 +452,7 @@ ELECTRETRIAssignment <- function(performanceTable,
         }
     }
     
-  
+    
     return(assignments)             
 } 
   

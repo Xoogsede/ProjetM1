@@ -1,6 +1,6 @@
 
 # Example
-
+{
   # the performance table
   
   performanceTable <- rbind(
@@ -26,10 +26,9 @@
   # vetos
   # vetosThresholdVector <- rbind(c(NA, NA, NA, NA, NA),c(NA, NA, NA, NA, NA),c(NA,NA,NA, NA, NA))
   vetoThresholdVector <- NULL
-  v=vetoThresholdVector
-  if (is.null(v)){              # Creation of the null vector for to avoid calculation problem
-    v <- rep(0, ncol(performanceTable))
-    vetoThresholdVector <- v
+  
+  if (is.null(vetoThresholdVector)){              # Creation of the null vector for to avoid calculation problem
+    vetoThresholdVector <- rep(0, ncol(performanceTable))
   }
   
   
