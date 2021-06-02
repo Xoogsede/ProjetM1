@@ -13,10 +13,8 @@ ELECTRETRIAssignment <- function(performanceTable,
                                  categoriesIDs = NULL)
 {
   
-  
-  
     ## check the input data
-    {
+   { 
       if (!((is.matrix(performanceTable) || (is.data.frame(performanceTable))))) 
         stop("wrong performanceTable, should be a matrix or a data frame")
       
@@ -54,14 +52,14 @@ ELECTRETRIAssignment <- function(performanceTable,
       if (!(is.null(criteriaIDs) || is.vector(criteriaIDs)))
         stop("criteriaIDs should be a vector")
       
-      if (!(is.null(categoriesIDs) || is.vector(categoriesIDs)))
+      if (!(is.null(categoriesIDs)) && !(is.vector(categoriesIDs)))
         stop("categoriesIDs should be a vector")
-    }
+  }
   
 
   
     # declaration of the different constants to simplify the calculations.
-    {
+   { 
       G <- performanceTable  
       
       B <- categoriesLowerProfiles 
@@ -69,7 +67,7 @@ ELECTRETRIAssignment <- function(performanceTable,
       
       K <- criteriaWeights
       Crt <- criteriaIDs 
-      F <- 1:ncol(G)                # criteria indices  
+      F <- 1:ncol(performanceTable)                # criteria indices  
       
       
       crtmm <- criteriaMinMax
@@ -78,7 +76,7 @@ ELECTRETRIAssignment <- function(performanceTable,
       
       n <- length(F)    # number of criteria 
       m <- length(A)    # number of alternatives  
-      h <- nrow(B)      # number of categori lower profil
+      h <- nrow(categoriesLowerProfiles)      # number of categori lower profil
       numCat <- length(categoriesRanks)
       
       q=indefferenceThresholdVector
@@ -104,34 +102,47 @@ ELECTRETRIAssignment <- function(performanceTable,
     
     
     # Construction of concordance index table.
-    {
-      c_j <- matrix(0, nrow = h*2, ncol = n)          # Matrix of the partial concordance indices 
+   { 
+      c_j <- matrix(0, nrow = nrow(categoriesLowerProfiles) *2, ncol = ncol(performanceTable))          # Matrix of the partial concordance indices 
       cj <- NULL
       concornames <- NULL                             # For  partial Concordance names
       
+      while(is.null(cj)) {
       # Table of partial concordance indices 
-      for (i in 1:m) {      # Loop for each alternative
-        for (j in F) {    # Loop for each criteria
+      for (i in seq_along(alternativesIDs)) {      # Loop for each alternative
+        for (j in seq_along(F)) {    # Loop for each criteria
           if (criteriaMinMax[j]=="min"){
             # For  maximisation
-          for (l in 1:h) {  # Loop for each category profile
+          for (l in seq_along(categoriesLowerProfiles[,1])) {  # Loop for each category profile
             
             # Calculation of the c_j(a_i,b_h)  
-            if (G[i,j] <= (B[l,j]-p[j])){
+            if (!is.null(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) && 
+                length(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) == 1 && 
+                !is.na(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) && 
+                performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])){
               c_j[l,j] <- 0
-            }else if((B[l,j]-q[j]) < G[i,j]){
+            }else if(!is.null((categoriesLowerProfiles[l,j]-indefferenceThresholdVector[j]) < performanceTable[i,j]) && 
+                     length((categoriesLowerProfiles[l,j]-indefferenceThresholdVector[j]) < performanceTable[i,j]) == 1 && 
+                     !is.na((categoriesLowerProfiles[l,j]-indefferenceThresholdVector[j]) < performanceTable[i,j]) && 
+                     (categoriesLowerProfiles[l,j]-indefferenceThresholdVector[j]) < performanceTable[i,j]){
               c_j[l,j] <- 1
             }else {
-              c_j[l,j] <- (p[j]+G[i,j]-B[l,j])/(p[j]-q[j])
+              c_j[l,j] <- (preferenceThresholdVector[j]+performanceTable[i,j]-categoriesLowerProfiles[l,j])/(preferenceThresholdVector[j]-indefferenceThresholdVector[j])
             }
             
             # Calculation of the c_j(b_h, a_i) 
-            if (G[i,j] >= (p[j]+B[l,j])){
+            if (!is.null(performanceTable[i,j] >= (preferenceThresholdVector[j]+categoriesLowerProfiles[l,j])) && 
+                length(performanceTable[i,j] >= (preferenceThresholdVector[j]+categoriesLowerProfiles[l,j])) == 1 && 
+                !is.na(performanceTable[i,j] >= (preferenceThresholdVector[j]+categoriesLowerProfiles[l,j])) && 
+                performanceTable[i,j] >= (preferenceThresholdVector[j]+categoriesLowerProfiles[l,j])){
               c_j[l+2,j] <- 0
-            }else if(G[i,j] < (q[j]+B[l,j])){
+            }else if(!is.null(performanceTable[i,j] < (indefferenceThresholdVector[j]+categoriesLowerProfiles[l,j])) && 
+                     length(performanceTable[i,j] < (indefferenceThresholdVector[j]+categoriesLowerProfiles[l,j])) == 1 && 
+                     !is.na(performanceTable[i,j] < (indefferenceThresholdVector[j]+categoriesLowerProfiles[l,j])) && 
+                     performanceTable[i,j] < (indefferenceThresholdVector[j]+categoriesLowerProfiles[l,j])){
               c_j[l+2,j] <- 1
             }else {
-              c_j[l+2,j] <- (p[j]-G[i,j]+B[l,j])/(p[j]-q[j])
+              c_j[l+2,j] <- (preferenceThresholdVector[j]-performanceTable[i,j]+categoriesLowerProfiles[l,j])/(preferenceThresholdVector[j]-indefferenceThresholdVector[j])
             }
           } 
         }
@@ -140,21 +151,33 @@ ELECTRETRIAssignment <- function(performanceTable,
           for (l in 1:h) {  # Loop for each category profile
               
               # Calculation of the c_j(a_i,b_h)  
-              if (G[i,j] >= (B[l,j]+p[j])){
+              if (!is.null(performanceTable[i,j] >= (categoriesLowerProfiles[l,j]+preferenceThresholdVector[j])) && 
+                  length(performanceTable[i,j] >= (categoriesLowerProfiles[l,j]+preferenceThresholdVector[j])) == 1 && 
+                  !is.na(performanceTable[i,j] >= (categoriesLowerProfiles[l,j]+preferenceThresholdVector[j])) && 
+                  performanceTable[i,j] >= (categoriesLowerProfiles[l,j]+preferenceThresholdVector[j])){
                 c_j[l,j] <- 0
-              }else if((B[l,j]+q[j]) > G[i,j]){
+              }else if(!is.null((categoriesLowerProfiles[l,j]+indefferenceThresholdVector[j]) > performanceTable[i,j]) && 
+                       length((categoriesLowerProfiles[l,j]+indefferenceThresholdVector[j]) > performanceTable[i,j]) == 1 && 
+                       !is.na((categoriesLowerProfiles[l,j]+indefferenceThresholdVector[j]) > performanceTable[i,j]) && 
+                       (categoriesLowerProfiles[l,j]+indefferenceThresholdVector[j]) > performanceTable[i,j]){
                 c_j[l,j] <- 1
               }else {
-                c_j[l,j] <- (p[j]+B[l,j]-G[i,j])/(p[j]-q[j])
+                c_j[l,j] <- (preferenceThresholdVector[j]+categoriesLowerProfiles[l,j]-performanceTable[i,j])/(preferenceThresholdVector[j]-indefferenceThresholdVector[j])
               }
               
               # Calculation of the c_j(b_h, a_i) 
-              if (G[i,j] <= (B[l,j]-p[j])){
+              if (!is.null(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) && 
+                  length(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) == 1 && 
+                  !is.na(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) && 
+                  performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])){
                 c_j[l+2,j] <- 0
-              }else if(G[i,j] > (B[l,j]-q[j])){
+              }else if(!is.null(performanceTable[i,j] > (categoriesLowerProfiles[l,j]-indefferenceThresholdVector[j])) && 
+                       length(performanceTable[i,j] > (categoriesLowerProfiles[l,j]-indefferenceThresholdVector[j])) == 1 && 
+                       !is.na(performanceTable[i,j] > (categoriesLowerProfiles[l,j]-indefferenceThresholdVector[j])) && 
+                       performanceTable[i,j] > (categoriesLowerProfiles[l,j]-indefferenceThresholdVector[j])){
                 c_j[l+2,j] <- 1
               }else {
-                c_j[l+2,j] <- (p[j]+G[i,j]-B[l,j])/(p[j]-q[j])
+                c_j[l+2,j] <- (preferenceThresholdVector[j]+performanceTable[i,j]-categoriesLowerProfiles[l,j])/(preferenceThresholdVector[j]-indefferenceThresholdVector[j])
               }
             } 
         }
@@ -162,61 +185,76 @@ ELECTRETRIAssignment <- function(performanceTable,
         }
         # Track of the partial concordance indices c_j(a,b_h) and c_j(b_h, a)
         cj<- rbind(cj,c_j)        
-        colnames(cj) <- colnames(G)
+        colnames(cj) <- colnames(performanceTable)
       }
       
         # partial Concordance names
-        for (z in 2:numCat-1) {
-          for (i in 1:m) {
+        for (z in 2:length(categoriesRanks)-1) {
+          for (i in seq_along(alternativesIDs)) {
             concornames <- cbind(concornames,paste("cj(a",i,",","b",z,")", sep=""), paste("cj(b",z,",","a",i,")", sep=""))
           } 
         }
-        cj_ordered <- rbind(cj[seq(1,nrow(cj), 2),],cj[seq(2,nrow(cj), 2),]) #cj(a,b) ordered
+        ab <- seq(1,nrow(cj), 2)
+        ba <- seq(2,nrow(cj), 2)
+        cj_ordered <- rbind(cj[ab,], cj[ba,]) #cj(a,b) ordered
         rownames(cj_ordered) <- t(concornames)
-    
+        
+        }
     }
     
     
     
     # Calculation of the global concordance indices C(a,b_h) et C(b_h, a)
-    {
+   { 
       cj_ordered<- data.frame(cj_ordered)
-      cj_ordered$Cglob <- t((K%*%t(cj_ordered))/sum(K))       # Matrix of the global concordance indices
+      cj_ordered$Cglob <- t((criteriaWeights%*%t(cj_ordered))/sum(criteriaWeights))       # Matrix of the global concordance indices
       cj_ordered
       }
       
     
     
     # Construction of discordance index table.
-    {
+   { 
       
-      d_j <- matrix(0, nrow = h*2, ncol = n)          # Matrix of the partial discordance indices 
+      d_j <- matrix(0, nrow = nrow(categoriesLowerProfiles)*2, ncol = ncol(performanceTable))          # Matrix of the partial discordance indices 
       dj <- NULL
       discornames <- NULL                             # For  partial discordance names
       
       # Table of partial discordance indices 
-      for (i in 1:m) {      # Loop for each alternative
-        for (j in F) {    # Loop for each criteria
+      for (i in seq_along(alternativesIDs)) {      # Loop for each alternative
+        for (j in seq_along(F)) {    # Loop for each criteria
           if (criteriaMinMax[j]=="min"){
             # For  maximisation
-            for (l in 1:h) {  # Loop for each category profile
+            for (l in seq_along(categoriesLowerProfiles[,1])) {  # Loop for each category profile
               
               # Calculation of the d_j(a_i,b_h)  
-              if (G[i,j] > (B[l,j]-p[j])){
+              if (!is.null(performanceTable[i,j] > (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) && 
+                  length(performanceTable[i,j] > (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) == 1 && 
+                  !is.na(performanceTable[i,j] > (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) && 
+                  performanceTable[i,j] > (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])){
                 d_j[l,j] <- 0
-              }else if((B[l,j]-v[j]) >= G[i,j]){
+              }else if(!is.null((categoriesLowerProfiles[l,j]-vetoThresholdVector[j]) >= performanceTable[i,j]) && 
+                       length((categoriesLowerProfiles[l,j]-vetoThresholdVector[j]) >= performanceTable[i,j]) == 1 && 
+                       !is.na((categoriesLowerProfiles[l,j]-vetoThresholdVector[j]) >= performanceTable[i,j]) && 
+                       (categoriesLowerProfiles[l,j]-vetoThresholdVector[j]) >= performanceTable[i,j]){
                 d_j[l,j] <- 1
               }else {
-                d_j[l,j] <- (G[i,j]-B[l,j]-p[j])/(v[j]-p[j])
+                d_j[l,j] <- (performanceTable[i,j]-categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])/(vetoThresholdVector[j]-preferenceThresholdVector[j])
               }
               
               # Calculation of the d_j(b_h, a_i) 
-              if (G[i,j] <= (p[j]+B[l,j])){
+              if (!is.null(performanceTable[i,j] <= (preferenceThresholdVector[j]+categoriesLowerProfiles[l,j])) && 
+                  length(performanceTable[i,j] <= (preferenceThresholdVector[j]+categoriesLowerProfiles[l,j])) == 1 && 
+                  !is.na(performanceTable[i,j] <= (preferenceThresholdVector[j]+categoriesLowerProfiles[l,j])) && 
+                  performanceTable[i,j] <= (preferenceThresholdVector[j]+categoriesLowerProfiles[l,j])){
                 d_j[l+2,j] <- 0
-              }else if(G[i,j] > (v[j]+B[l,j])){
+              }else if(!is.null(performanceTable[i,j] > (vetoThresholdVector[j]+categoriesLowerProfiles[l,j])) && 
+                       length(performanceTable[i,j] > (vetoThresholdVector[j]+categoriesLowerProfiles[l,j])) == 1 && 
+                       !is.na(performanceTable[i,j] > (vetoThresholdVector[j]+categoriesLowerProfiles[l,j])) && 
+                       performanceTable[i,j] > (vetoThresholdVector[j]+categoriesLowerProfiles[l,j])){
                 d_j[l+2,j] <- 1
               }else {
-                d_j[l+2,j] <- (G[i,j]-B[l,j]-p[j])/(v[j]-p[j])
+                d_j[l+2,j] <- (performanceTable[i,j]-categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])/(vetoThresholdVector[j]-preferenceThresholdVector[j])
               }
             } 
           }
@@ -225,21 +263,33 @@ ELECTRETRIAssignment <- function(performanceTable,
             for (l in 1:h) {  # Loop for each category profile
               
               # Calculation of the d_j(a_i,b_h)  
-              if (G[i,j] <= (B[l,j]+p[j])){
+              if (!is.null(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]+preferenceThresholdVector[j])) && 
+                  length(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]+preferenceThresholdVector[j])) == 1 && 
+                  !is.na(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]+preferenceThresholdVector[j])) && 
+                  performanceTable[i,j] <= (categoriesLowerProfiles[l,j]+preferenceThresholdVector[j])){
                 d_j[l,j] <- 0
-              }else if((B[l,j]+v[j]) < G[i,j]){
+              }else if(!is.null((categoriesLowerProfiles[l,j]+vetoThresholdVector[j]) < performanceTable[i,j]) && 
+                       length((categoriesLowerProfiles[l,j]+vetoThresholdVector[j]) < performanceTable[i,j]) == 1 && 
+                       !is.na((categoriesLowerProfiles[l,j]+vetoThresholdVector[j]) < performanceTable[i,j]) && 
+                       (categoriesLowerProfiles[l,j]+vetoThresholdVector[j]) < performanceTable[i,j]){
                 d_j[l,j] <- 1
               }else {
-                d_j[l,j] <- (G[i,j]-B[l,j]-p[j])/(v[j]-p[j])
+                d_j[l,j] <- (performanceTable[i,j]-categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])/(vetoThresholdVector[j]-preferenceThresholdVector[j])
               }
               
               # Calculation of the d_j(b_h, a_i) 
-              if (G[i,j] > (B[l,j]-p[j])){
+              if (!is.null(performanceTable[i,j] > (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) && 
+                  length(performanceTable[i,j] > (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) == 1 && 
+                  !is.na(performanceTable[i,j] > (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])) && 
+                  performanceTable[i,j] > (categoriesLowerProfiles[l,j]-preferenceThresholdVector[j])){
                 d_j[l+2,j] <- 0
-              }else if(G[i,j] <= (B[l,j]-v[j])){
+              }else if(!is.null(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-vetoThresholdVector[j])) && 
+                       length(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-vetoThresholdVector[j])) == 1 && 
+                       !is.na(performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-vetoThresholdVector[j])) && 
+                       performanceTable[i,j] <= (categoriesLowerProfiles[l,j]-vetoThresholdVector[j])){
                 d_j[l+2,j] <- 1
               }else {
-                d_j[l+2,j] <- (B[l,j]-G[i,j]-p[j])/(v[j]-p[j])
+                d_j[l+2,j] <- (categoriesLowerProfiles[l,j]-performanceTable[i,j]-preferenceThresholdVector[j])/(vetoThresholdVector[j]-preferenceThresholdVector[j])
               }
             } 
           }
@@ -247,12 +297,12 @@ ELECTRETRIAssignment <- function(performanceTable,
         }
         # Track of the partial discordance indices d_j(a,b_h) and d_j(b_h, a)
         dj<- rbind(dj,d_j)                         
-        colnames(dj) <- colnames(G)
+        colnames(dj) <- colnames(performanceTable)
       }
       
       # partial discordance names
-      for (z in 2:numCat-1) {
-        for (i in 1:m) {
+      for (z in 2:length(categoriesRanks)-1) {
+        for (i in seq_along(alternativesIDs)) {
           discornames <- cbind(discornames,paste("dj(a",i,",","b",z,")", sep=""), paste("dj(b",z,",","a",i,")", sep=""))
         } 
       }
@@ -263,10 +313,10 @@ ELECTRETRIAssignment <- function(performanceTable,
     
     
     # Calculation of the degree of credibility
-    {
+   { 
       sgma <- NULL                                         # Declaration of the credibility index vector           
       credibnames <- NULL                                  # Declaration of the credibility indices name           
-      for (i in 1:nrow(dj_ordered)) {
+      for (i in seq_along(dj_ordered[,1])) {
       if (max(dj_ordered[i,])==0) {
         sgma <- rbind(sgma,  cj_ordered$Cglob[i])
       }else if (max(dj_ordered[i,])==1) {
@@ -280,8 +330,8 @@ ELECTRETRIAssignment <- function(performanceTable,
       }
       }
       # Credibility row names
-      for (z in 2:numCat-1) {
-        for (i in 1:m) {
+      for (z in 2:length(categoriesRanks)-1) {
+        for (i in seq_along(alternativesIDs)) {
           credibnames <- cbind(credibnames,paste("sgma(a",i,",","b",z,")", sep=""), paste("sgma(b",z,",","a",i,")", sep=""))
         } 
       }
@@ -291,37 +341,37 @@ ELECTRETRIAssignment <- function(performanceTable,
     
     
     
-    # derternation of the preference relation between a_i and b_h
-    {
+    # dertermination of the preference relation between a_i and b_h
+   { 
       Outranks <- NULL
       # I     : Indefference (aSb_h and b_hSa ???aIb_h)
       # > (<) : Preference (a>b => aSb_h ; a<b => b_hSa)
       # R     : incomparable (not aSb_h and not b_hSa)
       for (i in seq(1,nrow(sgma), 2)) {
-        if (sgma[i] >= lambda & sgma[i+1] >= lambda) {            # If sigma(a, b_h) < lambda => 0 means aSb_h
+        if (sgma[i] >= lambda && sgma[i+1] >= lambda) {            # If sigma(a, b_h) < lambda => 0 means aSb_h
           Outranks<-rbind("I", Outranks)
-        } else if (sgma[i] >= lambda & sgma[i+1] < lambda) {
+        } else if (sgma[i] >= lambda && sgma[i+1] < lambda) {
           Outranks<-rbind("<", Outranks)                # else sigma(a, b_h) b_hSa
-        } else if (sgma[i] < lambda & sgma[i+1] >= lambda) {
+        } else if (sgma[i] < lambda && sgma[i+1] >= lambda) {
           Outranks<-rbind(">", Outranks)                # else sigma(a, b_h) b_hSa
-        }else if (sgma[i] < lambda & sgma[i+1] < lambda) {
+        }else if (sgma[i] < lambda && sgma[i+1] < lambda) {
           Outranks<-rbind("R", Outranks)                # else sigma(a, b_h) b_hSa
         }
       } 
       outrankTable <- NULL
       Outranks <- data.frame(Outranks)
-      for (i in seq(1, nrow(Outranks), ncol(B))) {
-        outrankTable <- rbind(t(Outranks$Outranks[i:(i+ncol(B)-1)]), outrankTable)
+      for (i in seq(1, nrow(Outranks), ncol(categoriesLowerProfiles))) {
+        outrankTable <- rbind(t(Outranks$Outranks[i:(i+ncol(categoriesLowerProfiles)-1)]), outrankTable)
       }
-      colnames(outrankTable) <- rownames(G)
-      rownames(outrankTable) <- rownames(B)
+      colnames(outrankTable) <- rownames(performanceTable)
+      rownames(outrankTable) <- rownames(categoriesLowerProfiles)
       outrankTable
-      }  
+       } 
      
     
     
     # Assignment  
-    {
+   { 
       # pessimistic assignment
       # a) compare alternatives ("a") successively to "b(i)" , for i=p,p-1, ..., 0,
       # b) let "b(h)" = the first profile such that "a" outranks "b(h).",
@@ -329,20 +379,20 @@ ELECTRETRIAssignment <- function(performanceTable,
         
       
       if (!(affectationMethod=="opt")) {
-        Pessimistic <-  matrix (0,nrow(B)+1 ,nrow(G) )
+        Pessimistic <-  matrix (0,nrow(categoriesLowerProfiles)+1 ,nrow(performanceTable) )
         rownames(Pessimistic) <- names(categoriesRanks)
-        colnames(Pessimistic) <- rownames(G)
+        colnames(Pessimistic) <- rownames(performanceTable)
       
         # Pessimistic assignment procedure:
         k<-1
         
-        for (i in 1:nrow(G)) {
-          while (k<nrow(B)) {
-            if (outrankTable[k,i]=="<" &  k==1)  {
+        for (i in seq_along(alternativesIDs)) {
+          while (k<nrow(categoriesLowerProfiles)) {
+            if (outrankTable[k,i]=="<" &&  k==1)  {
               Pessimistic[k,i]=rownames(Pessimistic)[k]
               Pessimistic[-k,i]=""
               k=k+1
-            }else if(k>=1 & k<nrow(B)){
+            }else if(k>=1 && k<nrow(categoriesLowerProfiles)){
               if ((outrankTable[k,i]==">" && outrankTable[k+1,i]==">") || 
                   (outrankTable[k,i]=="I" && outrankTable[k+1,i]==">") || 
                   (outrankTable[k,i]=="R" && outrankTable[k+1,i]==">") ||
@@ -385,9 +435,9 @@ ELECTRETRIAssignment <- function(performanceTable,
     
         
       }else if(affectationMethod=="opt"){
-        Optimistic <-  matrix (0,nrow(B)+1 ,nrow(G) )
+        Optimistic <-  matrix (0,nrow(categoriesLowerProfiles)+1 ,nrow(performanceTable) )
         rownames(Optimistic) <- names(categoriesRanks)
-        colnames(Optimistic) <- rownames(G)
+        colnames(Optimistic) <- rownames(performanceTable)
         
         # optimistic assignment,
         # a) compare alternatives ("a") successively to "b(i)" ,for  i=1, 2, ..., p+1,
@@ -395,15 +445,15 @@ ELECTRETRIAssignment <- function(performanceTable,
         # affect "a" to the category C(h). So we start in the lower row of the outrankTable
         
         # Optimistic assignment procedure: 
-        k<-nrow(B)
+        k<-nrow(categoriesLowerProfiles)
         
-          for (i in 1:nrow(G)) {
+          for (i in 1:nrow(performanceTable)) {
             while (k>1) {
-              if (outrankTable[k,i]==">" &  k==nrow(B))  {
+              if (outrankTable[k,i]==">" &&  k==nrow(categoriesLowerProfiles))  {
                   Optimistic[k+1,i]=rownames(Optimistic)[k+1]
                   Optimistic[-(k+1),i]=""
                   k=k-1
-                }else if(k>1 & k<=nrow(B)){
+                }else if(k>1 && k<=nrow(categoriesLowerProfiles)){
                   if ((outrankTable[k,i]=="<" && outrankTable[k-1,i]==">") || 
                       (outrankTable[k,i]=="I" && outrankTable[k-1,i]==">") || 
                       (outrankTable[k,i]=="R" && outrankTable[k-1,i]==">") ||
@@ -423,14 +473,14 @@ ELECTRETRIAssignment <- function(performanceTable,
                   k=k-1
                 
             }
-         k<- nrow(B) 
+         k<- nrow(categoriesLowerProfiles) 
           }
         
         Optimistic <- data.frame(Optimistic)
         rownames(Optimistic) <- NULL
         assingTable <- NULL
-        for (i in 1:ncol(Optimistic)) {
-          for (l in 1:nrow(Optimistic)) {
+        for (i in seq_along(Optimistic[1,])) {
+          for (l in seq_along(Optimistic[,1])) {
             if (!(Optimistic[l,i]=="")) {
               assingTable <- cbind(assingTable, Optimistic[l,i])
             }
@@ -455,5 +505,3 @@ ELECTRETRIAssignment <- function(performanceTable,
     
     return(assignments)             
 } 
-  
-  

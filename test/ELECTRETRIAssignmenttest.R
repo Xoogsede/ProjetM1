@@ -1,6 +1,6 @@
 
 # Example
-{
+
   # the performance table
   
   performanceTable <- rbind(
@@ -27,9 +27,9 @@
   # vetosThresholdVector <- rbind(c(NA, NA, NA, NA, NA),c(NA, NA, NA, NA, NA),c(NA,NA,NA, NA, NA))
   #vetoThresholdVector <- NULL
   
-  "if (is.null(vetoThresholdVector)){              # Creation of the null vector for to avoid calculation problem
-    vetoThresholdVector <- rep(0, ncol(performanceTable))
-  }"
+ # "if (is.null(vetoThresholdVector)){              # Creation of the null vector for to avoid calculation problem
+  #  vetoThresholdVector <- rep(0, ncol(performanceTable))
+ # }"
   
   
   
@@ -47,7 +47,7 @@
   # the order of the categories, 1 being the best
   
   categoriesRanks <-c(1,2,3)
-  categoriesIDs <- c("Good","Medium","Bad")
+  categoriesIDs <- as.vector(c("Good","Medium","Bad"))
   names(categoriesRanks) <- categoriesIDs
   
   # criteria to minimize or maximize
@@ -80,5 +80,5 @@
                                       criteriaWeights = criteriaWeights, 
                                       criteriaMinMax = criteriaMinMax)
     
-}
+
 
