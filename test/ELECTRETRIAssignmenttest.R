@@ -25,11 +25,11 @@
   
   # vetos
   # vetosThresholdVector <- rbind(c(NA, NA, NA, NA, NA),c(NA, NA, NA, NA, NA),c(NA,NA,NA, NA, NA))
-  vetoThresholdVector <- NULL
+  #vetoThresholdVector <- NULL
   
-  if (is.null(vetoThresholdVector)){              # Creation of the null vector for to avoid calculation problem
+  "if (is.null(vetoThresholdVector)){              # Creation of the null vector for to avoid calculation problem
     vetoThresholdVector <- rep(0, ncol(performanceTable))
-  }
+  }"
   
   
   
@@ -65,26 +65,20 @@
   
 
   
-  cutThreshold =NULL
-  affectationMethod = NULL
+  #cutThreshold =NULL
+  #affectationMethod = NULL
 
  
 
   
 
-  assignments <- ELECTRETRIAssignment(performanceTable, 
-                                      indefferenceThresholdVector, 
-                                      preferenceThresholdVector, 
-                                      vetoThresholdVector=NULL,
-                                      cutThreshold =NULL,
-                                      affectationMethod = NULL,
-                                      categoriesLowerProfiles,  
-                                      categoriesRanks, 
-                                      criteriaWeights, 
-                                      criteriaMinMax,
-                                      alternativesIDs = NULL, 
-                                      criteriaIDs = NULL, 
-                                      categoriesIDs = NULL)
+  assignments <- ELECTRETRIAssignment(performanceTable = performanceTable, 
+                                      indefferenceThresholdVector = indefferenceThresholdVector, 
+                                      preferenceThresholdVector = preferenceThresholdVector,
+                                      categoriesLowerProfiles = categoriesLowerProfiles,  
+                                      categoriesRanks = categoriesRanks, 
+                                      criteriaWeights = criteriaWeights, 
+                                      criteriaMinMax = criteriaMinMax)
     
 }
 
