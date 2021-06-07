@@ -72,13 +72,21 @@
 
   
 
-  assignments <- ELECTRETRIAssignment(performanceTable = performanceTable, 
+  assignmentsOPT <- ELECTRETRIAssignment(performanceTable = performanceTable, 
                                       indefferenceThresholdVector = indefferenceThresholdVector, 
                                       preferenceThresholdVector = preferenceThresholdVector,
-                                      categoriesLowerProfiles = categoriesLowerProfiles,  
+                                      categoriesLowerProfiles = categoriesLowerProfiles, affectationMethod = "opt",  
                                       categoriesRanks = categoriesRanks, 
                                       criteriaWeights = criteriaWeights, 
                                       criteriaMinMax = criteriaMinMax)
-    
+  
+  assignmentsPESS <- ELECTRETRIAssignment(performanceTable = performanceTable, 
+                                         indefferenceThresholdVector = indefferenceThresholdVector, 
+                                         preferenceThresholdVector = preferenceThresholdVector,
+                                         categoriesLowerProfiles = categoriesLowerProfiles, affectationMethod = "pess",  
+                                         categoriesRanks = categoriesRanks, 
+                                         criteriaWeights = criteriaWeights, 
+                                         criteriaMinMax = criteriaMinMax)
+  
 
 
