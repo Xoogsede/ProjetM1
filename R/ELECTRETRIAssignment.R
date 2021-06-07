@@ -109,7 +109,7 @@ ELECTRETRIAssignment <- function(performanceTable,
       
       while(is.null(cj)) {
       # Table of partial concordance indices 
-      for (i in seq_along(alternativesIDs)) {      # Loop for each alternative
+      for (i in seq_along(performanceTable[,1])) {      # Loop for each alternative
         for (j in seq_along(F)) {    # Loop for each criteria
           if (criteriaMinMax[j]=="min"){
             # For  maximisation
@@ -190,7 +190,7 @@ ELECTRETRIAssignment <- function(performanceTable,
       
         # partial Concordance names
         for (z in 2:length(categoriesRanks)-1) {
-          for (i in seq_along(alternativesIDs)) {
+          for (i in seq_along(performanceTable[,1])) {
             concornames <- cbind(concornames,paste("cj(a",i,",","b",z,")", sep=""), paste("cj(b",z,",","a",i,")", sep=""))
           } 
         }
@@ -221,7 +221,7 @@ ELECTRETRIAssignment <- function(performanceTable,
       discornames <- NULL                             # For  partial discordance names
       
       # Table of partial discordance indices 
-      for (i in seq_along(alternativesIDs)) {      # Loop for each alternative
+      for (i in seq_along(performanceTable[,1])) {      # Loop for each alternative
         for (j in seq_along(F)) {    # Loop for each criteria
           if (criteriaMinMax[j]=="min"){
             # For  maximisation
@@ -302,7 +302,7 @@ ELECTRETRIAssignment <- function(performanceTable,
       
       # partial discordance names
       for (z in 2:length(categoriesRanks)-1) {
-        for (i in seq_along(alternativesIDs)) {
+        for (i in seq_along(performanceTable[,1])) {
           discornames <- cbind(discornames,paste("dj(a",i,",","b",z,")", sep=""), paste("dj(b",z,",","a",i,")", sep=""))
         } 
       }
@@ -331,7 +331,7 @@ ELECTRETRIAssignment <- function(performanceTable,
       }
       # Credibility row names
       for (z in 2:length(categoriesRanks)-1) {
-        for (i in seq_along(alternativesIDs)) {
+        for (i in seq_along(performanceTable[,1])) {
           credibnames <- cbind(credibnames,paste("sgma(a",i,",","b",z,")", sep=""), paste("sgma(b",z,",","a",i,")", sep=""))
         } 
       }
@@ -386,7 +386,7 @@ ELECTRETRIAssignment <- function(performanceTable,
         # Pessimistic assignment procedure:
         k<-1
         
-        for (i in seq_along(alternativesIDs)) {
+        for (i in seq_along(performanceTable[,1])) {
           while (k<nrow(categoriesLowerProfiles)) {
             if (outrankTable[k,i]=="<" &&  k==1)  {
               Pessimistic[k,i]=rownames(Pessimistic)[k]
